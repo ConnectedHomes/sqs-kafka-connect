@@ -18,6 +18,9 @@
 package com.hivehome.kafka.connect.sqs;
 
 import com.amazon.sqs.javamessaging.SQSConnectionFactory;
+import com.amazon.sqs.javamessaging.message.SQSBytesMessage;
+import com.amazon.sqs.javamessaging.message.SQSObjectMessage;
+import com.amazon.sqs.javamessaging.message.SQSTextMessage;
 import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
@@ -80,7 +83,8 @@ public class SQSStreamSourceTask extends SourceTask {
             ArrayList<SourceRecord> records = new ArrayList<>();
             Message msg = consumer.receive();
             log.info("Received message {}", msg);
-            records.add(new SourceRecord(offsetKey(queue), offsetValue(msg.getJMSMessageID()), topic, VALUE_SCHEMA, msg.toString()));
+            String extractedMessage = extract(msg);
+            records.add(new SourceRecord(offsetKey(queue), offsetValue(msg.getJMSMessageID()), topic, VALUE_SCHEMA, extractedMessage));
             return records;
         } catch (JMSException e) {
             // Underlying stream was killed, probably as a result of calling stop. Allow to return
@@ -88,6 +92,24 @@ public class SQSStreamSourceTask extends SourceTask {
             log.error("JMSException", e);
         }
         return null;
+    }
+
+    private String extract(Message msg) throws JMSException {
+        String extracted;
+        if (msg instanceof SQSTextMessage) {
+            SQSTextMessage textMessage = ((SQSTextMessage) msg);
+            extracted = textMessage.getText();
+        } else if (msg instanceof SQSBytesMessage) {
+            SQSBytesMessage bytesMessage = ((SQSBytesMessage) msg);
+            extracted = new String(bytesMessage.getBodyAsBytes());
+        } else if (msg instanceof SQSObjectMessage) {
+            SQSObjectMessage objectMessage = ((SQSObjectMessage) msg);
+            Object obj = objectMessage.getObject();
+            extracted = obj.toString();
+        } else {
+            extracted = msg.toString();
+        }
+        return extracted;
     }
 
     private void createSQSConsumer() throws JMSException {

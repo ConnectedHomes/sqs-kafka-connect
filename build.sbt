@@ -7,7 +7,7 @@ git.useGitDescribe := true
 name := "sqs-kafka-connect"
 organization := "com.hivehome"
 
-scalaVersion in ThisBuild := "2.10.6"
+scalaVersion in ThisBuild := "2.12.0"
 ivyScala := ivyScala.value map {
   _.copy(overrideScalaVersion = true)
 }
@@ -41,9 +41,7 @@ lazy val dependencies = Seq(
   "org.apache.kafka" % "connect-api" % Versions.Kafka,
   "io.confluent" % "kafka-avro-serializer" % Versions.Confluent,
   "io.confluent" % "kafka-schema-registry-client" % Versions.Confluent,
-//  "ch.qos.logback" % "logback-classic" % Versions.Logback,
-//  "com.typesafe.scala-logging" %% "scala-logging" % Versions.ScalaLogging,
-  "com.typesafe.scala-logging" %% "scala-logging-slf4j" % Versions.ScalaLogging,
+  "com.typesafe.scala-logging" %% "scala-logging" % Versions.ScalaLogging,
   "org.scalatest" %% "scalatest" % Versions.ScalaTest % "test,it",
   "org.scalacheck" %% "scalacheck" % Versions.ScalaCheck % "test,it"
 ) map {

@@ -4,7 +4,7 @@ import scala.language.postfixOps
 enablePlugins(GitVersioning)
 git.useGitDescribe := true
 
-name := "dp-sns-connector"
+name := "sqs-kafka-connect"
 organization := "com.hivehome"
 
 scalaVersion in ThisBuild := "2.10.6"
@@ -35,17 +35,17 @@ publishTo in ThisBuild := {
 }
 
 lazy val dependencies = Seq(
-  "com.amazonaws" % "aws-java-sdk" % "1.9.6",
-  "com.amazonaws" % "amazon-sqs-java-messaging-lib" % "1.0.0",
-//  "javax.jms" % "jms-api" % "1.1-rev-1",
+  "com.amazonaws" % "aws-java-sdk" % Versions.AwsSdk,
+  "com.amazonaws" % "amazon-sqs-java-messaging-lib" % Versions.AwsSqsJms,
   "org.apache.avro" % "avro" % Versions.Avro,
   "org.apache.kafka" % "connect-api" % Versions.Kafka,
   "io.confluent" % "kafka-avro-serializer" % Versions.Confluent,
   "io.confluent" % "kafka-schema-registry-client" % Versions.Confluent,
+//  "ch.qos.logback" % "logback-classic" % Versions.Logback,
+//  "com.typesafe.scala-logging" %% "scala-logging" % Versions.ScalaLogging,
   "com.typesafe.scala-logging" %% "scala-logging-slf4j" % Versions.ScalaLogging,
   "org.scalatest" %% "scalatest" % Versions.ScalaTest % "test,it",
-  "org.scalacheck" %% "scalacheck" % Versions.ScalaCheck % "test,it",
-  "com.github.scopt" %% "scopt" % Versions.Scopt
+  "org.scalacheck" %% "scalacheck" % Versions.ScalaCheck % "test,it"
 ) map {
   _.excludeAll(
     ExclusionRule(name = "javax.activation"),

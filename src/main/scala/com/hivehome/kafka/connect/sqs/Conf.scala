@@ -24,6 +24,7 @@ import scala.util.Try
 
 case class Conf(queueName: Option[String] = None,
                 topicName: Option[String] = None,
+                awsRegion: String = "eu-west-1",
                 awsKey: Option[String] = None,
                 awsSecret: Option[String] = None) {
   def toMap: Map[String, String] = {

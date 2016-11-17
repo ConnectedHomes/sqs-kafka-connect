@@ -7,28 +7,29 @@ import com.amazonaws.auth.{AWSCredentialsProviderChain, BasicAWSCredentials, Def
 import com.amazonaws.internal.StaticCredentialsProvider
 import com.amazonaws.regions.{Region, Regions}
 
-class SQSConsumer(conf: Conf) {
-  def create(): MessageConsumer = {
-    val chain = buildCredentialsProviderChain
-    createSQSConsumer(chain)
+object SQSConsumer {
+  def apply(conf: Conf): MessageConsumer = {
+    val chain = buildCredentialsProviderChain(conf)
+    createSQSConsumer(conf, chain)
   }
 
   @throws(classOf[JMSException])
-  private def createSQSConsumer(chain: AWSCredentialsProviderChain): MessageConsumer = {
+  private def createSQSConsumer(conf: Conf, chain: AWSCredentialsProviderChain): MessageConsumer = {
+    val region = Regions.fromName(conf.awsRegion)
     val connectionFactory = SQSConnectionFactory.builder
-      .withRegion(Region.getRegion(Regions.EU_WEST_1))
+      .withRegion(Region.getRegion(region))
       .withAWSCredentialsProvider(chain)
       .build
 
     val connection = connectionFactory.createConnection
-    val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+    val session = connection.createSession(false, Session.CLIENT_ACKNOWLEDGE)
     val queue = session.createQueue(conf.queueName.get)
     val consumer = session.createConsumer(queue)
     connection.start()
     consumer
   }
 
-  private def buildCredentialsProviderChain: AWSCredentialsProviderChain = {
+  private def buildCredentialsProviderChain(conf: Conf): AWSCredentialsProviderChain = {
     if (conf.awsKey.isDefined && conf.awsSecret.isDefined) {
       val key = conf.awsKey.get
       val secret = conf.awsSecret.get
@@ -36,8 +37,4 @@ class SQSConsumer(conf: Conf) {
       new AWSCredentialsProviderChain(new StaticCredentialsProvider(credentials), new DefaultAWSCredentialsProviderChain)
     } else new DefaultAWSCredentialsProviderChain
   }
-}
-
-object SQSConsumer {
-  def apply(conf: Conf): MessageConsumer = new SQSConsumer(conf).create()
 }

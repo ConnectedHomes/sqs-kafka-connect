@@ -36,7 +36,8 @@ object SQSStreamSourceTask {
 class SQSStreamSourceTask extends SourceTask with StrictLogging {
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
-  private val unackedMessages = mutable.Map[String, Message]()
+  // MessageId to MessageHandle used to ack the message on the commitRecord method invocation
+  private val unAckedMessages = mutable.Map[String, Message]()
 
   def version: String = Version()
 
@@ -65,7 +66,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
     try {
       val msg = consumer.receive
       logger.debug("Received message {}", msg)
-      unackedMessages.update(msg.getJMSMessageID, msg)
+      unAckedMessages.update(msg.getJMSMessageID, msg)
       val extracted = extract(msg)
       val key = offsetKey(conf.queueName.get)
       val value = offsetValue(msg.getJMSMessageID)
@@ -90,10 +91,9 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
 
   @throws(classOf[InterruptedException])
   override def commitRecord(record: SourceRecord): Unit = {
-    //TODO: Implement ACK
     val offset = record.sourceOffset()
     val msgId = offset.get(SQSStreamSourceTask.MessageId).asInstanceOf[String]
-    val msg = unackedMessages.remove(msgId)
+    val msg = unAckedMessages.remove(msgId)
     msg.foreach(_.acknowledge())
   }
 

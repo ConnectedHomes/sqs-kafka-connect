@@ -30,11 +30,11 @@ object SQSConsumer {
   }
 
   private def buildCredentialsProviderChain(conf: Conf): AWSCredentialsProviderChain = {
-    if (conf.awsKey.isDefined && conf.awsSecret.isDefined) {
-      val key = conf.awsKey.get
-      val secret = conf.awsSecret.get
-      val credentials = new BasicAWSCredentials(key, secret)
-      new AWSCredentialsProviderChain(new StaticCredentialsProvider(credentials), new DefaultAWSCredentialsProviderChain)
-    } else new DefaultAWSCredentialsProviderChain
+    (conf.awsKey, conf.awsSecret) match {
+      case (Some(key), Some(secret)) =>
+        val credentials = new BasicAWSCredentials(key, secret)
+        new AWSCredentialsProviderChain(new StaticCredentialsProvider(credentials), new DefaultAWSCredentialsProviderChain)
+      case _ => new DefaultAWSCredentialsProviderChain
+    }
   }
 }

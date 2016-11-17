@@ -33,8 +33,7 @@ case class Conf(queueName: Option[String] = None,
       .updated(DestinationKafkaTopic, topicName)
       .updated(AwsKey, awsKey)
       .updated(AwsSecret, awsSecret)
-      .filter(_._2.isDefined)
-      .mapValues(_.get)
+      .collect { case (k, Some(v)) => (k, v) }
   }
 }
 

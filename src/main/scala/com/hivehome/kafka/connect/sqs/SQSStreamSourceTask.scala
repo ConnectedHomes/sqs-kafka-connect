@@ -19,57 +19,57 @@ package com.hivehome.kafka.connect.sqs
 import java.util.{List => JList, Map => JMap, _}
 import javax.jms._
 
-import com.amazon.sqs.javamessaging.SQSConnectionFactory
 import com.amazon.sqs.javamessaging.message.{SQSBytesMessage, SQSObjectMessage, SQSTextMessage}
-import com.amazonaws.auth.{AWSCredentialsProviderChain, BasicAWSCredentials, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.internal.StaticCredentialsProvider
-import com.amazonaws.regions.{Region, Regions}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.source.{SourceRecord, SourceTask}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object SQSStreamSourceTask {
   val SqsQueueField: String = "queue"
-  val PositionField: String = "position"
+  val MessageId: String = "messageId"
   private val ValueSchema: Schema = Schema.STRING_SCHEMA
 }
 
 class SQSStreamSourceTask extends SourceTask with StrictLogging {
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
+  private val unackedMessages = mutable.Map[String, Message]()
 
   def version: String = Version()
 
-  def start(props: JMap[String, String]) {
+  def start(props: JMap[String, String]): Unit = {
     conf = Conf.parse(props.asScala.toMap).get
-  }
 
-  @throws(classOf[InterruptedException])
-  def poll: JList[SourceRecord] = {
-    def offsetKey(filename: String) = Collections.singletonMap(SQSStreamSourceTask.SqsQueueField, filename)
-    def offsetValue(pos: String) = Collections.singletonMap(SQSStreamSourceTask.PositionField, pos)
-
-    if (consumer == null) {
+    logger.debug("Creating consumer...")
+    synchronized {
       try {
-        val chain = buildCredentialsProviderChain
-        consumer = createSQSConsumer(chain)
-        logger.debug("Opened SQS topic {} for reading", conf.queueName)
+        consumer = SQSConsumer(conf)
+        logger.info("Created consumer to  SQS topic {} for reading", conf.queueName)
       }
       catch {
         case e: JMSException =>
           logger.error("JMSException", e)
-          e.printStackTrace()
       }
     }
+  }
+
+  @throws(classOf[InterruptedException])
+  def poll: JList[SourceRecord] = {
+    def offsetKey(queueName: String) = Collections.singletonMap(SQSStreamSourceTask.SqsQueueField, queueName)
+    def offsetValue(msgId: String) = Collections.singletonMap(SQSStreamSourceTask.MessageId, msgId)
+
+    assert(consumer != null) // should be initialised as part of start()
     try {
       val msg = consumer.receive
       logger.debug("Received message {}", msg)
-      val extractedMessage = extract(msg)
+      unackedMessages.update(msg.getJMSMessageID, msg)
+      val extracted = extract(msg)
       val key = offsetKey(conf.queueName.get)
       val value = offsetValue(msg.getJMSMessageID)
-      List(new SourceRecord(key, value, conf.topicName.get, SQSStreamSourceTask.ValueSchema, extractedMessage)).asJava
+      List(new SourceRecord(key, value, conf.topicName.get, SQSStreamSourceTask.ValueSchema, extracted)).asJava
     }
     catch {
       case e: JMSException =>
@@ -88,32 +88,17 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
     }
   }
 
-  @throws(classOf[JMSException])
-  private def createSQSConsumer(chain: AWSCredentialsProviderChain): MessageConsumer = {
-    val connectionFactory = SQSConnectionFactory.builder
-      .withRegion(Region.getRegion(Regions.EU_WEST_1))
-      .withAWSCredentialsProvider(chain)
-      .build
-
-    val connection = connectionFactory.createConnection
-    val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
-    val queue = session.createQueue(conf.queueName.get)
-    val consumer = session.createConsumer(queue)
-    connection.start()
-    consumer
-  }
-
-  private def buildCredentialsProviderChain: AWSCredentialsProviderChain = {
-    if (conf.awsKey.isDefined && conf.awsSecret.isDefined) {
-      val key = conf.awsKey.get
-      val secret = conf.awsSecret.get
-      val credentials = new BasicAWSCredentials(key, secret)
-      new AWSCredentialsProviderChain(new StaticCredentialsProvider(credentials), new DefaultAWSCredentialsProviderChain)
-    } else new DefaultAWSCredentialsProviderChain
+  @throws(classOf[InterruptedException])
+  override def commitRecord(record: SourceRecord): Unit = {
+    //TODO: Implement ACK
+    val offset = record.sourceOffset()
+    val msgId = offset.get(SQSStreamSourceTask.MessageId).asInstanceOf[String]
+    val msg = unackedMessages.remove(msgId)
+    msg.foreach(_.acknowledge())
   }
 
   def stop() {
-    logger.debug("Stopping")
+    logger.debug("Stopping task")
     synchronized {
       try {
         if (consumer != null) {
@@ -128,5 +113,4 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
       this.notify()
     }
   }
-
 }

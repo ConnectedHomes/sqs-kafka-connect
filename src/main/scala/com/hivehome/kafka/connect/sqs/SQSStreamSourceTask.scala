@@ -16,28 +16,28 @@
   **/
 package com.hivehome.kafka.connect.sqs
 
-import java.util.{List => JList, Map => JMap, _}
+import java.util.{List => JList, Map => JMap}
 import javax.jms._
 
-import com.amazon.sqs.javamessaging.message.{SQSBytesMessage, SQSObjectMessage, SQSTextMessage}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.source.{SourceRecord, SourceTask}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
+import scala.util.Try
+import scala.util.control.NonFatal
 
 object SQSStreamSourceTask {
-  val SqsQueueField: String = "queue"
-  val MessageId: String = "messageId"
-  private val ValueSchema: Schema = Schema.STRING_SCHEMA
+  private val SqsQueueField: String = "queue"
+  private val MessageId: String = "messageId"
+  private val ValueSchema = Schema.STRING_SCHEMA
 }
 
 class SQSStreamSourceTask extends SourceTask with StrictLogging {
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
   // MessageId to MessageHandle used to ack the message on the commitRecord method invocation
-  private val unAckedMessages = mutable.Map[String, Message]()
+  private var unAckedMessages = Map[String, Message]()
 
   def version: String = Version()
 
@@ -51,55 +51,52 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
         logger.info("Created consumer to  SQS topic {} for reading", conf.queueName)
       }
       catch {
-        case e: JMSException =>
-          logger.error("JMSException", e)
+        case NonFatal(e) => logger.error("JMSException", e)
       }
     }
   }
 
+  import com.hivehome.kafka.connect.sqs.SQSStreamSourceTask._
+
   @throws(classOf[InterruptedException])
   def poll: JList[SourceRecord] = {
-    def offsetKey(queueName: String) = Collections.singletonMap(SQSStreamSourceTask.SqsQueueField, queueName)
-    def offsetValue(msgId: String) = Collections.singletonMap(SQSStreamSourceTask.MessageId, msgId)
+    def toRecord(msg: Message): SourceRecord = {
+      val extracted = MessageExtractor(msg)
+      val key = Map(SqsQueueField -> conf.queueName.get).asJava
+      val value = Map(MessageId -> msg.getJMSMessageID).asJava
+      new SourceRecord(key, value, conf.topicName.get, ValueSchema, extracted)
+    }
 
     assert(consumer != null) // should be initialised as part of start()
-    try {
+    Try {
       val msg = consumer.receive
       logger.debug("Received message {}", msg)
-      unAckedMessages.update(msg.getJMSMessageID, msg)
-      val extracted = extract(msg)
-      val key = offsetKey(conf.queueName.get)
-      val value = offsetValue(msg.getJMSMessageID)
-      List(new SourceRecord(key, value, conf.topicName.get, SQSStreamSourceTask.ValueSchema, extracted)).asJava
-    }
-    catch {
-      case e: JMSException =>
-        logger.error("JMSException", e)
-        List[SourceRecord]().asJava
-    }
-  }
 
-  @throws(classOf[JMSException])
-  private def extract(msg: Message): String = {
-    msg match {
-      case text: SQSTextMessage => text.getText
-      case bytes: SQSBytesMessage => new String(bytes.getBodyAsBytes)
-      case objectMsg: SQSObjectMessage => objectMsg.getObject.toString
-      case _ => msg.toString
-    }
+      // This is not threadsafe but the poll method is called by a single thread
+      // as KafkaConnect assigns a single thread to each task.
+      unAckedMessages = unAckedMessages.updated(msg.getJMSMessageID, msg)
+
+      val record = toRecord(msg)
+      List(record)
+    }.recover {
+      case NonFatal(e) =>
+        logger.error("JMSException", e)
+        List.empty
+    }.get.asJava
   }
 
   @throws(classOf[InterruptedException])
   override def commitRecord(record: SourceRecord): Unit = {
-    val offset = record.sourceOffset()
-    val msgId = offset.get(SQSStreamSourceTask.MessageId).asInstanceOf[String]
-    val msg = unAckedMessages.remove(msgId)
-    msg.foreach(_.acknowledge())
+    val msgId = record.sourceOffset().get(MessageId).asInstanceOf[String]
+    val maybeMsg = unAckedMessages.get(msgId)
+    maybeMsg.foreach(_.acknowledge())
+    unAckedMessages = unAckedMessages - msgId
   }
 
   def stop() {
     logger.debug("Stopping task")
     synchronized {
+      unAckedMessages = Map()
       try {
         if (consumer != null) {
           consumer.close()
@@ -107,8 +104,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
         }
       }
       catch {
-        case e: JMSException =>
-          logger.error("Failed to close consumer stream: ", e)
+        case NonFatal(e) => logger.error("Failed to close consumer stream: ", e)
       }
       this.notify()
     }

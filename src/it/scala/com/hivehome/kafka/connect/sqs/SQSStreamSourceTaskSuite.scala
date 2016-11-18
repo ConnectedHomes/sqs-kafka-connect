@@ -5,21 +5,19 @@ import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.services.sqs.model.{CreateQueueRequest, SendMessageRequest, SendMessageResult}
 import org.apache.kafka.connect.source.SourceRecord
 import org.scalacheck.Gen
+import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 /*
  * Note: This class requires AWS keys and secret in the environment or
  * system properties to run. The keys should have access to SQS in AWS.
  */
-class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matchers {
+class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matchers with Eventually {
 
   val queueName = Gen.alphaStr
-    .map(a => if (a.length > 10) a.substring(0, 10) else a)
-    .map(a => s"test-connect-$a")
+    .map(a => s"test-connect-${a.take(10)}")
     .sample.get
   var queueUrl: String = null
 
@@ -63,18 +61,24 @@ class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matc
     // when
     task.commitRecord(sourceRecord)
 
+    // and
+    val secondMsgText = "This is my message text."
+    val secondSendResult = sendMessage(secondMsgText)
     // no more messages and will block forever
-    val fut = Future(task.poll.asScala)
-    Thread.sleep(1000)
+    val secondSourceRecords = eventually(task.poll.asScala)
 
     // then
-    fut.isCompleted shouldBe false
+    secondSourceRecords should have size 1
+
+    // and
+    val secondSourceRecord = secondSourceRecords.head
+    verify(secondSourceRecord, secondSendResult.getMessageId, secondMsgText)
 
     // when
-    task.stop()
+    task.commitRecord(secondSourceRecord)
 
-    //then
-    fut.isCompleted shouldBe true
+    // should not throw exception
+    task.stop()
   }
 
   test("should receive redelivered message after visibility timeout") {
@@ -97,20 +101,15 @@ class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matc
     // when no commitRecord
     // task.commitRecord(sourceRecord)
 
-    // no more messages and will block forever
-    val fut = Future (task.poll.asScala)
-    Thread.sleep(3000) // more than message visibility timeout
+    // original message is redelivered
+    val secondSourceRecords = eventually (task.poll.asScala)
 
     // then
-    fut.isCompleted shouldBe true
-    val secondSourceRecord = fut.value.flatMap(_.toOption).flatMap(_.headOption).get
+    val secondSourceRecord = secondSourceRecords.head
     verify(secondSourceRecord, sendResult.getMessageId, msgText)
 
-    // when
+    // should not throw exception
     task.stop()
-
-    //then
-    fut.isCompleted shouldBe true
   }
 
   def verify(record: SourceRecord, msgId: String, msgText: String): Unit = {

@@ -43,6 +43,8 @@ object Conf {
   val SourceSqsQueue = "source.queue"
   val AwsKey = "aws.key"
   val AwsSecret = "aws.secret"
+  val AwsRegion = "aws.region"
+
   val ConfigDef = new ConfigDef()
     .define(SourceSqsQueue, Type.STRING, Importance.HIGH, "Source SQS queue name to consumer from.")
     .define(DestinationKafkaTopic, Type.STRING, Importance.HIGH, "Destination Kafka topicName to publish data to")
@@ -54,6 +56,7 @@ object Conf {
     val topicName = props.get(Conf.DestinationKafkaTopic)
     val awsKey = props.get(Conf.AwsKey)
     val awsSecret = props.get(Conf.AwsSecret)
+    val awsRegion = props.get(Conf.AwsRegion)
 
     if (queueName == null || queueName.isEmpty)
       throw new ConnectException("Configuration must include 'queueName' setting")
@@ -62,7 +65,11 @@ object Conf {
     if (topicName == null || topicName.isEmpty)
       throw new ConnectException("Configuration must include 'topicName' setting")
 
-    Conf(queueName = queueName, topicName = topicName, awsKey = awsKey, awsSecret = awsSecret)
+    val conf = Conf(queueName = queueName, topicName = topicName, awsKey = awsKey, awsSecret = awsSecret)
+    awsRegion match {
+      case Some(region) => conf.copy(awsRegion = region)
+      case _ => conf
+    }
   }
 }
 

@@ -37,7 +37,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
   // MessageId to MessageHandle used to ack the message on the commitRecord method invocation
-  private var unAckedMessages = Map[String, Message]()
+  private var unAcknowledgedMessages = Map[String, Message]()
 
   def version: String = Version()
 
@@ -51,7 +51,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
         logger.info("Created consumer to  SQS topic {} for reading", conf.queueName)
       }
       catch {
-        case NonFatal(e) => logger.error("JMSException", e)
+        case NonFatal(e) => logger.error("Exception", e)
       }
     }
   }
@@ -69,18 +69,19 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
 
     assert(consumer != null) // should be initialised as part of start()
     Try {
-      val msg = consumer.receive
-      logger.debug("Received message {}", msg)
+      Option(consumer.receive).map { msg =>
+        logger.debug("Received message {}", msg)
 
-      // This is not threadsafe but the poll method is called by a single thread
-      // as KafkaConnect assigns a single thread to each task.
-      unAckedMessages = unAckedMessages.updated(msg.getJMSMessageID, msg)
+        // This operation is not threadsafe as a result the plugin is not threadsafe.
+        // However KafkaConnect assigns a single thread to each task and the poll
+        // method is always called by a single thread.
+        unAcknowledgedMessages = unAcknowledgedMessages.updated(msg.getJMSMessageID, msg)
 
-      val record = toRecord(msg)
-      List(record)
+        toRecord(msg)
+      }.toSeq
     }.recover {
       case NonFatal(e) =>
-        logger.error("JMSException", e)
+        logger.error("Exception while processing message", e)
         List.empty
     }.get.asJava
   }
@@ -88,15 +89,15 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
   @throws(classOf[InterruptedException])
   override def commitRecord(record: SourceRecord): Unit = {
     val msgId = record.sourceOffset().get(MessageId).asInstanceOf[String]
-    val maybeMsg = unAckedMessages.get(msgId)
+    val maybeMsg = unAcknowledgedMessages.get(msgId)
     maybeMsg.foreach(_.acknowledge())
-    unAckedMessages = unAckedMessages - msgId
+    unAcknowledgedMessages = unAcknowledgedMessages - msgId
   }
 
   def stop() {
     logger.debug("Stopping task")
     synchronized {
-      unAckedMessages = Map()
+      unAcknowledgedMessages = Map()
       try {
         if (consumer != null) {
           consumer.close()

@@ -1,5 +1,7 @@
 package com.hivehome.kafka.connect.sqs
 
+import javax.jms.MessageConsumer
+
 import com.amazon.sqs.javamessaging.message.SQSTextMessage
 import org.scalatest.concurrent.Eventually
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
@@ -7,14 +9,21 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 class SQSConsumerSuite extends FunSuite with BeforeAndAfterAll with Matchers with SQSSupport with Eventually {
 
   val conf = Conf(queueName = Some(queueName))
+  var consumer: MessageConsumer = _
 
-  override def beforeAll() = createQueue()
-  override def afterAll() = deleteQueue()
+  override def beforeAll() = {
+    createQueue()
+    consumer = SQSConsumer(conf)
+  }
+
+  override def afterAll() = {
+    consumer.close()
+    deleteQueue()
+  }
 
   test("should create consumer which receives messages") {
     sendMessage("blah")
 
-    val consumer = SQSConsumer(conf)
     val msg = consumer.receive()
     msg.acknowledge()
 
@@ -26,9 +35,8 @@ class SQSConsumerSuite extends FunSuite with BeforeAndAfterAll with Matchers wit
   test("should redeliver message when not acked") {
     sendMessage("blah")
 
-    val consumer = SQSConsumer(conf)
     val msg = consumer.receive()
-//    msg.acknowledge()
+    // msg.acknowledge()
 
     val text = msg.asInstanceOf[SQSTextMessage].getText
     text shouldEqual "blah"
@@ -39,5 +47,4 @@ class SQSConsumerSuite extends FunSuite with BeforeAndAfterAll with Matchers wit
     val text2 = msg2.asInstanceOf[SQSTextMessage].getText
     text2 shouldEqual "blah"
   }
-
 }

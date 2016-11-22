@@ -1,0 +1,3 @@
+#!/bin/bash
+docker run --rm -e DEV_UID=$(id -u `whoami`) -e DEV_GID=$(id -g `whoami`) -v `pwd`:/data bgchops-docker-dockerv2-local.artifactoryonline.com/bgch-dp/fpm "$@"
+

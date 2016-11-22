@@ -26,6 +26,9 @@ Contents of a sample `connect-sqs-source.properties` are as follows
     aws.region=eu-west-1
     aws.key=ABC
     aws.secret=DEF
+    
+## Unsupported features
+ - Pause and Resume operations are not supported by the connector
 
 ## Developing the connector
 

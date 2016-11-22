@@ -40,6 +40,7 @@ lazy val dependencies = Seq(
   "com.amazonaws" % "aws-java-sdk" % Versions.AwsSdk,
   "com.amazonaws" % "amazon-sqs-java-messaging-lib" % Versions.AwsSqsJms,
   "org.apache.avro" % "avro" % Versions.Avro,
+  "org.apache.kafka" % "kafka-clients" % Versions.Kafka,
   "org.apache.kafka" % "connect-api" % Versions.Kafka,
   "io.confluent" % "kafka-avro-serializer" % Versions.Confluent,
   "io.confluent" % "kafka-schema-registry-client" % Versions.Confluent,

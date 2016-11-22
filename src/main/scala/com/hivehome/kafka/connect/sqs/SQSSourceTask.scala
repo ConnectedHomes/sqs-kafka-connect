@@ -27,13 +27,13 @@ import scala.collection.JavaConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
 
-object SQSStreamSourceTask {
+object SQSSourceTask {
   private val SqsQueueField: String = "queue"
   private val MessageId: String = "messageId"
   private val ValueSchema = Schema.STRING_SCHEMA
 }
 
-class SQSStreamSourceTask extends SourceTask with StrictLogging {
+class SQSSourceTask extends SourceTask with StrictLogging {
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
   // MessageId to MessageHandle used to ack the message on the commitRecord method invocation
@@ -56,7 +56,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
     }
   }
 
-  import com.hivehome.kafka.connect.sqs.SQSStreamSourceTask._
+  import com.hivehome.kafka.connect.sqs.SQSSourceTask._
 
   @throws(classOf[InterruptedException])
   def poll: JList[SourceRecord] = {

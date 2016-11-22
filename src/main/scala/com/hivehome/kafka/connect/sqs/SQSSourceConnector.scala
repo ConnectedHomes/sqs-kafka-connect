@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 /**
   * A simple Amazon SQS source connector to ingest data to Kafka using Connect.
   */
-class SQSStreamSourceConnector extends SourceConnector {
+class SQSSourceConnector extends SourceConnector {
   private var conf: Conf = _
 
   def version: String = Version()
@@ -36,9 +36,11 @@ class SQSStreamSourceConnector extends SourceConnector {
     conf = Conf.parse(props.asScala.toMap).get
   }
 
-  def taskClass: Class[_ <: Task] = classOf[SQSStreamSourceTask]
+  def taskClass: Class[_ <: Task] = classOf[SQSSourceTask]
 
-  def taskConfigs(maxTasks: Int): JList[JMap[String, String]] = (0 until maxTasks).map(_ => conf.toMap.asJava).asJava
+  def taskConfigs(maxTasks: Int): JList[JMap[String, String]] = {
+    (0 until maxTasks).map(_ => conf.toMap.asJava).asJava
+  }
 
   def stop(): Unit = {}
 

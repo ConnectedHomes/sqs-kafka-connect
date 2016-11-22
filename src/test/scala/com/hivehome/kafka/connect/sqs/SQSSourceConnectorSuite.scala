@@ -4,9 +4,9 @@ import org.scalatest.{FunSuite, Matchers}
 
 import scala.collection.JavaConverters._
 
-class SQSStreamSourceConnectorSuite extends FunSuite with Matchers {
+class SQSSourceConnectorSuite extends FunSuite with Matchers {
 
-  val connector = new SQSStreamSourceConnector()
+  val connector = new SQSSourceConnector()
 
   val props = Map[String, String](
     Conf.SourceSqsQueue -> "in",
@@ -14,7 +14,7 @@ class SQSStreamSourceConnectorSuite extends FunSuite with Matchers {
   ).asJava
 
   test("should return task class") {
-    connector.taskClass shouldEqual classOf[SQSStreamSourceTask]
+    connector.taskClass shouldEqual classOf[SQSSourceTask]
   }
 
   test("should return config def") {

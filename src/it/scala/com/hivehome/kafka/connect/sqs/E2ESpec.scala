@@ -3,7 +3,6 @@ package com.hivehome.kafka.connect.sqs
 import java.time.Instant
 
 import com.typesafe.scalalogging.StrictLogging
-import org.scalatest.concurrent.Eventually
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,9 +18,9 @@ import scala.concurrent.Future
   * - SQS queue named `test-sqs`
   * - Kafka topic named `connect-test`
   *
-  * Should this test mode to the kafka-connect-deployment project?
+  * Should this test move to the kafka-connect-deployment project?
   */
-class E2ESpec extends FunSuite with Matchers with SQSSupport with Eventually with StrictLogging {
+class E2ESpec extends FunSuite with Matchers with SQSSupport with StrictLogging {
   private val KafkaTopic: String = "connect-test"
   override val queueName = "test-sqs" // kafka connect should be setup with this SQS
   queueUrl = sqs.getQueueUrl(queueName).getQueueUrl
@@ -30,7 +29,7 @@ class E2ESpec extends FunSuite with Matchers with SQSSupport with Eventually wit
     "bootstrap.servers" -> sys.env.getOrElse("KAFKA", "localhost:9092"),
     "schema.registry.url" -> sys.env.getOrElse("SCHEMA_REGISTRY", "http://localhost:8081"))
 
-  val consumer = KafkaAvroConsumer[String](props, topicName = KafkaTopic)
+  val consumer = KafkaAvroConsumer[String, String](props, topicName = KafkaTopic)
 
   test("should route message SQS -> Kafka") {
     Future {
@@ -41,6 +40,7 @@ class E2ESpec extends FunSuite with Matchers with SQSSupport with Eventually wit
       sendMessage(Instant.now().toString)
       logger.debug("sent message..")
     }
+
     val msgs = consumer.poll(1, accept = _ => true)
 
     msgs should have size 1

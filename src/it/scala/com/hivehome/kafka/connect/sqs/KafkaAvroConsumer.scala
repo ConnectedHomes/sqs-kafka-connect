@@ -1,6 +1,5 @@
 package com.hivehome.kafka.connect.sqs
 
-import java.time.Instant
 import java.util.{Properties, UUID}
 
 import com.typesafe.scalalogging.StrictLogging
@@ -21,7 +20,7 @@ import scala.language.postfixOps
   * utilizes the new `KafkaConsumer` instead of the `ConsumerIterator`
   * which was used in the previous version.
   */
-class KafkaAvroConsumer[V](cons: KafkaConsumer[_, V]) extends StrictLogging {
+class KafkaAvroConsumer[K, V](cons: KafkaConsumer[K, V]) extends StrictLogging {
   val PollingInterval = 100
 
   /**
@@ -60,7 +59,7 @@ class KafkaAvroConsumer[V](cons: KafkaConsumer[_, V]) extends StrictLogging {
 object KafkaAvroConsumer {
   val logger = LoggerFactory.getLogger(getClass)
 
-  def apply[V](kafkaProps: Map[String, String], topicName: String): KafkaAvroConsumer[V] = {
+  def apply[K, V](kafkaProps: Map[String, String], topicName: String): KafkaAvroConsumer[K, V] = {
     val props = new Properties()
     props.putAll(kafkaProps.asJava)
     props.put(ConsumerConfigConst.GROUP_ID_CONFIG, "test" + UUID.randomUUID().toString.substring(0, 10))
@@ -68,19 +67,8 @@ object KafkaAvroConsumer {
     props.put(ConsumerConfigConst.VALUE_DESERIALIZER_CLASS_CONFIG, classOf[KafkaAvroDeserializer])
 
     logger.info(s"Consuming from $topicName with properties $props")
-    val cons = new KafkaConsumer[Array[Byte], V](props)
+    val cons = new KafkaConsumer[K, V](props)
     cons.subscribe(Seq(topicName).asJava)
     new KafkaAvroConsumer(cons)
-  }
-
-  def main(args: Array[String]): Unit = {
-    val props = Map("bootstrap.servers" -> "localhost:9092", "schema.registry.url" -> "http://localhost:8081")
-    val consumer = KafkaAvroConsumer(props, topicName = "connect-test")
-
-    while (true) {
-      logger.debug(Instant.now().toString)
-      logger.debug(consumer.poll(1, 500 seconds).toString())
-      logger.debug(Instant.now().toString)
-    }
   }
 }

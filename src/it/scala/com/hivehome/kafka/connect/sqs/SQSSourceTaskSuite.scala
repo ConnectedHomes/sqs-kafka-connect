@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
  * Note: This class requires AWS keys and secret in the environment or
  * system properties to run. The keys should have access to SQS in AWS.
  */
-class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matchers with Eventually with SQSSupport {
+class SQSSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matchers with Eventually with SQSSupport {
 
   val props = Map[String, String](
     Conf.SourceSqsQueue -> queueName,
@@ -28,7 +28,7 @@ class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matc
     val sendResult = sendMessage(msgText)
 
     // when
-    val task = new SQSStreamSourceTask
+    val task = new SQSSourceTask
     task.start(props)
     val sourceRecords = task.poll.asScala
 
@@ -68,7 +68,7 @@ class SQSStreamSourceTaskSuite extends FunSuite with BeforeAndAfterAll with Matc
     val sendResult = sendMessage(msgText)
 
     // when
-    val task = new SQSStreamSourceTask
+    val task = new SQSSourceTask
     task.start(props)
     val sourceRecords = task.poll.asScala
 

@@ -70,7 +70,7 @@ class SQSStreamSourceTask extends SourceTask with StrictLogging {
     assert(consumer != null) // should be initialised as part of start()
     Try {
       Option(consumer.receive).map { msg =>
-        logger.debug("Received message {}", msg)
+        logger.info("Received message {}", msg)
 
         // This operation is not threadsafe as a result the plugin is not threadsafe.
         // However KafkaConnect assigns a single thread to each task and the poll

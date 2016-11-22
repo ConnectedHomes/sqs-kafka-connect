@@ -38,7 +38,7 @@ class SQSStreamSourceConnector extends SourceConnector {
 
   def taskClass: Class[_ <: Task] = classOf[SQSStreamSourceTask]
 
-  def taskConfigs(maxTasks: Int): JList[JMap[String, String]] = List[JMap[String, String]](conf.toMap.asJava).asJava
+  def taskConfigs(maxTasks: Int): JList[JMap[String, String]] = (0 until maxTasks).map(_ => conf.toMap.asJava).asJava
 
   def stop(): Unit = {}
 

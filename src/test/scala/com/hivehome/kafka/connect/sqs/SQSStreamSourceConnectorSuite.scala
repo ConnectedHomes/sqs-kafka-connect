@@ -27,8 +27,12 @@ class SQSStreamSourceConnectorSuite extends FunSuite with Matchers {
 
   test("should create task configs") {
     connector.start(props)
-    val taskConfig = connector.taskConfigs(1).asScala.head
+    val maxTasks = 10
+    val taskConfigs = connector.taskConfigs(maxTasks).asScala
 
-    taskConfig shouldEqual props
+    taskConfigs should have size maxTasks
+    taskConfigs foreach { taskConfig =>
+      taskConfig shouldEqual props
+    }
   }
 }

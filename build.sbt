@@ -1,4 +1,5 @@
 import sbt._
+import sbtassembly.AssemblyKeys
 import scala.language.postfixOps
 
 enablePlugins(GitVersioning)
@@ -76,6 +77,13 @@ lazy val root = project.in(file("."))
   )
   .configs(dpIntegrationTest)
   .settings(Defaults.itSettings: _*)
+
+// This allows the fat jar to be published to artifactory as part of the release process.
+artifact in (Compile, assembly) := {
+  val art = (artifact in (Compile, assembly)).value
+  art.copy(`classifier` = Some("assembly"))
+}
+addArtifact(artifact in (Compile, assembly), assembly)
 
 // Must for for javaOptions to be passed properly from outside sbt.
 fork := true

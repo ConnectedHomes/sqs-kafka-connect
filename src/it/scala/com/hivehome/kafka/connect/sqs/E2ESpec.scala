@@ -31,7 +31,8 @@ class E2ESpec extends FunSuite with Matchers with SQSSupport with StrictLogging 
 
   val consumer = KafkaAvroConsumer[String, String](props, topicName = KafkaTopic)
 
-  test("should route message SQS -> Kafka") {
+  // Test is ignored because it does not run without dependent services
+  ignore("should route message SQS -> Kafka") {
     Future {
       // sleep is required so that the message to SQS
       // is sent after the consumer is listening on the kafka topic

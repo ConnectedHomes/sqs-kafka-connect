@@ -18,7 +18,24 @@ ivyScala := ivyScala.value map {
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers in ThisBuild ++= Seq("Confluent" at "http://packages.confluent.io/maven/")
+val jarRepoReleases = SettingKey[String]("jarRepoReleases", "JAR repository address for releases.")
+val jarRepoSnapshots = SettingKey[String]("jarRepoSnapshots", "JAR repository address for snapshots.")
+
+jarRepoReleases := util.Properties.envOrElse("DP_JAR_REPO_RELEASES", "https://bgchops.artifactoryonline.com/bgchops/dataplatform-maven-releases")
+jarRepoSnapshots := util.Properties.envOrElse("DP_JAR_REPO_SNAPSHOTS", "https://bgchops.artifactoryonline.com/bgchops/dataplatform-maven-snapshots")
+
+resolvers in ThisBuild ++= Seq(
+  "DP Nexus Snapshots" at s"${jarRepoSnapshots.value}",
+  "DP Nexus Releases" at s"${jarRepoReleases.value}",
+  "Confluent" at "http://packages.confluent.io/maven/"
+)
+
+publishTo in ThisBuild := {
+  if (Path.userHome / ".ivy2" / ".credentials" exists)
+    Credentials.add(Path.userHome / ".ivy2" / ".credentials", sbt.ConsoleLogger())
+  if (isSnapshot.value) Some("snapshots" at jarRepoSnapshots.value)
+  else Some("releases" at jarRepoReleases.value)
+}
 
 lazy val dependencies = Seq(
   "com.amazonaws" % "aws-java-sdk" % Versions.AwsSdk,

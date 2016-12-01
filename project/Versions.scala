@@ -5,8 +5,7 @@ object Versions {
   val Kafka = "0.10.0.1"
   val CommonLogging = "1.2"
   val Confluent = "3.0.0"
-  val Logback = "1.1.7"
   val ScalaCheck = "1.13.4"
-  val ScalaLogging = "3.5.0"
+  val Slf4j = "1.7.21"
   val ScalaTest = "3.0.0"
 }

@@ -45,8 +45,8 @@ lazy val dependencies = Seq(
   "org.apache.kafka" % "connect-api" % Versions.Kafka,
   "io.confluent" % "kafka-avro-serializer" % Versions.Confluent,
   "io.confluent" % "kafka-schema-registry-client" % Versions.Confluent,
-  "com.typesafe.scala-logging" %% "scala-logging" % Versions.ScalaLogging,
-  "commons-logging" % "commons-logging" % Versions.CommonLogging,
+  "org.slf4j" % "slf4j-api" % Versions.Slf4j,
+  "org.slf4j" % "jcl-over-slf4j" % Versions.Slf4j  ,
   "org.scalatest" %% "scalatest" % Versions.ScalaTest % "test,it",
   "org.scalacheck" %% "scalacheck" % Versions.ScalaCheck % "test,it"
 ) map {
@@ -57,6 +57,7 @@ lazy val dependencies = Seq(
     ExclusionRule(name = "org.apache.geronimo.specs"),
     ExclusionRule(name = "servlet-api"),
     ExclusionRule(name = "jsr305"),
+    ExclusionRule(name = "commons-logging"),
     ExclusionRule(organization = "commons-beanutils"),
     ExclusionRule(organization = "org.ow2.asm", name = "asm"),
     ExclusionRule(organization = "org.jboss.netty"),

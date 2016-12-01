@@ -19,9 +19,9 @@ package com.hivehome.kafka.connect.sqs
 import java.util.{List => JList, Map => JMap}
 import javax.jms._
 
-import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.connect.data.Schema
 import org.apache.kafka.connect.source.{SourceRecord, SourceTask}
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -33,7 +33,8 @@ object SQSSourceTask {
   private val ValueSchema = Schema.STRING_SCHEMA
 }
 
-class SQSSourceTask extends SourceTask with StrictLogging {
+class SQSSourceTask extends SourceTask {
+  val logger = LoggerFactory.getLogger(getClass.getName)
   private var conf: Conf = _
   private var consumer: MessageConsumer = null
   // MessageId to MessageHandle used to ack the message on the commitRecord method invocation

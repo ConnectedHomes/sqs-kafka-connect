@@ -2,7 +2,6 @@ package com.hivehome.kafka.connect.sqs
 
 import java.util.{Properties, UUID}
 
-import com.typesafe.scalalogging.StrictLogging
 import io.confluent.kafka.serializers.KafkaAvroDeserializer
 import org.apache.kafka.clients.consumer.{ConsumerConfig => ConsumerConfigConst, KafkaConsumer}
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -20,7 +19,8 @@ import scala.language.postfixOps
   * utilizes the new `KafkaConsumer` instead of the `ConsumerIterator`
   * which was used in the previous version.
   */
-class KafkaAvroConsumer[K, V](cons: KafkaConsumer[K, V]) extends StrictLogging {
+class KafkaAvroConsumer[K, V](cons: KafkaConsumer[K, V]) {
+  val logger = LoggerFactory.getLogger(getClass.getName)
   val PollingInterval = 100
 
   /**

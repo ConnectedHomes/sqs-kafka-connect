@@ -2,8 +2,8 @@ package com.hivehome.kafka.connect.sqs
 
 import java.time.Instant
 
-import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{FunSuite, Matchers}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,7 +20,8 @@ import scala.concurrent.Future
   *
   * Should this test move to the kafka-connect-deployment project?
   */
-class E2ESpec extends FunSuite with Matchers with SQSSupport with StrictLogging {
+class E2ESpec extends FunSuite with Matchers with SQSSupport {
+  val logger = LoggerFactory.getLogger(getClass.getName)
   private val KafkaTopic: String = "connect-test"
   override val queueName = "test-sqs" // kafka connect should be setup with this SQS
   queueUrl = sqs.getQueueUrl(queueName).getQueueUrl

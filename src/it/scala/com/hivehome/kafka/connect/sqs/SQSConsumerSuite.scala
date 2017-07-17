@@ -11,12 +11,12 @@ class SQSConsumerSuite extends FunSuite with BeforeAndAfterAll with Matchers wit
   val conf = Conf(queueName = Some(queueName))
   var consumer: MessageConsumer = _
 
-  override def beforeAll() = {
+  override def beforeAll(): Unit = {
     createQueue()
     consumer = SQSConsumer(conf)
   }
 
-  override def afterAll() = {
+  override def afterAll(): Unit = {
     consumer.close()
     deleteQueue()
   }

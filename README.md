@@ -1,4 +1,4 @@
-#sqs-kafka-connect
+# sqs-kafka-connect
 ------------------
 
 Kafka Connect plugin to read from Amazon SQS as a source to ingest data to Kafka.

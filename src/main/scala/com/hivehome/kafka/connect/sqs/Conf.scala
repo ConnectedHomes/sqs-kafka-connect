@@ -29,12 +29,13 @@ case class Conf(queueName: Option[String] = None,
                 awsSecret: Option[String] = None) {
   def toMap: Map[String, String] = {
     import Conf._
-    Map[String, Option[String]]()
-      .updated(SourceSqsQueue, queueName)
-      .updated(DestinationKafkaTopic, topicName)
-      .updated(AwsKey, awsKey)
-      .updated(AwsSecret, awsSecret)
-      .collect { case (k, Some(v)) => (k, v) }
+    Map[String, Option[String]](
+      SourceSqsQueue -> queueName,
+      DestinationKafkaTopic -> topicName,
+      AwsKey -> awsKey,
+      AwsSecret -> awsSecret,
+      AwsRegion -> Some(awsRegion)
+    ).collect { case (k, Some(v)) => (k, v) }
   }
 }
 

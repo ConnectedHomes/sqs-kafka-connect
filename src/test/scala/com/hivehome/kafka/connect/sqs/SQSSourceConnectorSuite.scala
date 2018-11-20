@@ -10,7 +10,8 @@ class SQSSourceConnectorSuite extends FunSuite with Matchers {
 
   val props = Map[String, String](
     Conf.SourceSqsQueue -> "in",
-    Conf.DestinationKafkaTopic -> "out"
+    Conf.DestinationKafkaTopic -> "out",
+    Conf.AwsRegion -> "eu-west-1"
   ).asJava
 
   test("should return task class") {

@@ -29,12 +29,13 @@ case class Conf(queueName: Option[String] = None,
                 awsSecret: Option[String] = None) {
   def toMap: Map[String, String] = {
     import Conf._
-    Map[String, Option[String]]()
-      .updated(SourceSqsQueue, queueName)
-      .updated(DestinationKafkaTopic, topicName)
-      .updated(AwsKey, awsKey)
-      .updated(AwsSecret, awsSecret)
-      .collect { case (k, Some(v)) => (k, v) }
+    Map[String, Option[String]](
+      SourceSqsQueue -> queueName,
+      DestinationKafkaTopic -> topicName,
+      AwsKey -> awsKey,
+      AwsSecret -> awsSecret,
+      AwsRegion -> Some(awsRegion)
+    ).collect { case (k, Some(v)) => (k, v) }
   }
 }
 
@@ -48,14 +49,14 @@ object Conf {
   val ConfigDef = new ConfigDef()
     .define(SourceSqsQueue, Type.STRING, Importance.HIGH, "Source SQS queue name to consumer from.")
     .define(DestinationKafkaTopic, Type.STRING, Importance.HIGH, "Destination Kafka topicName to publish data to")
-    .define(AwsKey, Type.STRING, Importance.MEDIUM, "AWS Key to connect to SQS")
-    .define(AwsSecret, Type.STRING, Importance.MEDIUM, "AWS secret to connect to SQS")
+    .define(AwsKey, Type.STRING, "", Importance.MEDIUM, "AWS Key to connect to SQS")
+    .define(AwsSecret, Type.STRING, "", Importance.MEDIUM, "AWS secret to connect to SQS")
 
   def parse(props: Map[String, String]): Try[Conf] = Try {
     val queueName = props.get(Conf.SourceSqsQueue)
     val topicName = props.get(Conf.DestinationKafkaTopic)
-    val awsKey = props.get(Conf.AwsKey)
-    val awsSecret = props.get(Conf.AwsSecret)
+    val awsKey = props.get(Conf.AwsKey).filter(_.nonEmpty)
+    val awsSecret = props.get(Conf.AwsSecret).filter(_.nonEmpty)
     val awsRegion = props.get(Conf.AwsRegion)
 
     if (queueName == null || queueName.isEmpty)
